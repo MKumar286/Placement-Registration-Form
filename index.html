@@ -1479,32 +1479,61 @@
         form.requestSubmit();
     });
 
+    // Helper function to convert selected file input to Base64 object
+    function fileToBase64(fileInputId) {
+        return new Promise((resolve) => {
+            const fileInput = document.getElementById(fileInputId);
+            if (!fileInput || !fileInput.files[0]) {
+                resolve(null);
+                return;
+            }
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = () => resolve({ name: file.name, base64: reader.result });
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(file);
+        });
+    }
+
     // Form Submission Handling
-    form.addEventListener('submit', e => {
+    form.addEventListener('submit', async e => {
         e.preventDefault();
         submitBtn.disabled = true;
-        submitBtn.innerText = 'Submitting...';
+        submitBtn.innerText = 'Uploading Files & Submitting...';
 
-        fetch(scriptURL, { method: 'POST', body: new FormData(form)})
-            .then(response => {
-                statusMsg.style.display = 'block';
-                statusMsg.style.backgroundColor = '#dcfce7';
-                statusMsg.style.color = '#166534';
-                statusMsg.innerText = '✅ Success! Your registration response has been saved successfully.';
-                submitBtn.disabled = false;
-                submitBtn.innerText = '🚀 Submit Application';
-                
-                // Show Download PDF button
-                downloadBtn.style.display = 'inline-flex';
-            })
-            .catch(error => {
-                statusMsg.style.display = 'block';
-                statusMsg.style.backgroundColor = '#fee2e2';
-                statusMsg.style.color = '#991b1b';
-                statusMsg.innerText = '❌ Error submitting response. Please try again.';
-                submitBtn.disabled = false;
-                submitBtn.innerText = '🚀 Submit Application';
+        try {
+            const formData = new FormData(form);
+            const payload = {};
+            formData.forEach((value, key) => { payload[key] = value; });
+
+            // Convert all uploaded files to Base64 strings
+            payload.passport_photo = await fileToBase64('passport_photo');
+            payload.rank_card_file = await fileToBase64('rank_card_file');
+            payload.cmm_file = await fileToBase64('cmm_file');
+            payload.student_sig_file = await fileToBase64('student_sig_file');
+            payload.parent_sig_file = await fileToBase64('parent_sig_file');
+
+            const response = await fetch(scriptURL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
             });
+
+            statusMsg.style.display = 'block';
+            statusMsg.style.backgroundColor = '#dcfce7';
+            statusMsg.style.color = '#166534';
+            statusMsg.innerText = '✅ Success! Your registration response and files have been uploaded successfully.';
+            submitBtn.disabled = false;
+            submitBtn.innerText = '🚀 Submit Application';
+            downloadBtn.style.display = 'inline-flex';
+
+        } catch (error) {
+            statusMsg.style.display = 'block';
+            statusMsg.style.backgroundColor = '#fee2e2';
+            statusMsg.style.color = '#991b1b';
+            statusMsg.innerText = '❌ Error submitting response. Please try again.';
+            submitBtn.disabled = false;
+            submitBtn.innerText = '🚀 Submit Application';
+        }
     });
 </script>
 
